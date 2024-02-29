@@ -1,6 +1,30 @@
+/// Implementing the HEVC spec for levels
+///
+/// https://itu.int/rec/T-REC-H.265-202309-I/en
 use std::fmt::Display;
 
-#[derive(Debug, Clone, Copy)]
+pub fn select(width: u32, height: u32, framerate: f32) -> LevelSpecification {
+    let sr = (width * height) as u64 * framerate.ceil() as u64;
+    for level in LEVEL_DETAILS.iter() {
+        if sr <= level.max_luma_sample_rate {
+            return *level;
+        }
+    }
+
+    LEVEL_DETAILS[LEVEL_DETAILS.len() - 1]
+}
+
+pub fn get(level: Level) -> LevelSpecification {
+    for l in LEVEL_DETAILS.iter() {
+        if l.id() == level {
+            return *l;
+        }
+    }
+
+    LEVEL_DETAILS[LEVEL_DETAILS.len() - 1]
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Level {
     L1,
     L2,
@@ -20,17 +44,6 @@ pub enum Level {
     L7_1,
     L7_2,
     L8_5,
-}
-
-pub fn select(width: u32, height: u32, framerate: f32) -> LevelDetail {
-    let sr = (width * height) as u64 * framerate.ceil() as u64;
-    for level in LEVEL_DETAILS.iter() {
-        if sr <= level.max_luma_sample_rate {
-            return *level;
-        }
-    }
-
-    return LEVEL_DETAILS[LEVEL_DETAILS.len() - 1];
 }
 
 /// HEVC spec states that the level is a multiple of 30
@@ -61,6 +74,31 @@ impl From<usize> for Level {
     }
 }
 
+impl Level {
+    fn usize(&self) -> usize {
+        match self {
+            Level::L1 => 30,
+            Level::L2 => 60,
+            Level::L2_1 => 63,
+            Level::L3 => 90,
+            Level::L3_1 => 93,
+            Level::L4 => 120,
+            Level::L4_1 => 123,
+            Level::L5 => 150,
+            Level::L5_1 => 153,
+            Level::L5_2 => 156,
+            Level::L6 => 180,
+            Level::L6_1 => 183,
+            Level::L6_2 => 186,
+            Level::L6_3 => 189,
+            Level::L7 => 210,
+            Level::L7_1 => 213,
+            Level::L7_2 => 216,
+            Level::L8_5 => 255,
+        }
+    }
+}
+
 impl Display for Level {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -87,141 +125,226 @@ impl Display for Level {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct LevelDetail {
-    pub id: Level,
+pub struct LevelSpecification {
+    id: Level,
     /// Samples (pixels) per second
-    pub max_luma_sample_rate: u64,
+    max_luma_sample_rate: u64,
     /// MaxLumaPs (samples) per picture
-    pub max_luma_picture_size: u32,
-    pub max_bit_rate_main: u32,
-    pub max_bit_rate_high: u32,
+    max_luma_picture_size: u32,
+    max_bit_rate_main: u32,
+    max_bit_rate_high: Option<u32>,
 }
 
-pub const LEVEL_DETAILS: [LevelDetail; 18] = [
-    LevelDetail {
+impl LevelSpecification {
+    pub fn id(&self) -> Level {
+        self.id
+    }
+    pub fn max_luma_sample_rate(&self) -> u64 {
+        self.max_luma_sample_rate
+    }
+    pub fn max_luma_picture_size(&self) -> u32 {
+        self.max_luma_picture_size
+    }
+    pub fn max_bit_rate_main(&self) -> u32 {
+        self.max_bit_rate_main
+    }
+    pub fn max_bit_rate_main_10(&self) -> u32 {
+        self.max_bit_rate_main
+    }
+    pub fn max_bit_rate_main_12(&self) -> u32 {
+        (self.max_bit_rate_main as f32 * 1.5) as u32
+    }
+    pub fn max_bit_rate_main_444_12(&self) -> u32 {
+        self.max_bit_rate_main * 3
+    }
+    pub fn max_bit_rate_main_444_16_intra(&self) -> u32 {
+        self.max_bit_rate_main * 8
+    }
+    pub fn max_bit_rate_main_throughput_444_16_intra(&self) -> u32 {
+        self.max_bit_rate_main_444_16_intra() * 12
+    }
+    pub fn max_bit_rate_high(&self) -> Option<u32> {
+        self.max_bit_rate_high
+    }
+    pub fn max_bit_rate_high_10(&self) -> Option<u32> {
+        self.max_bit_rate_high
+    }
+    pub fn max_bit_rate_high_12(&self) -> Option<u32> {
+        self.max_bit_rate_high.map(|v| (v as f32 * 1.5) as u32)
+    }
+    pub fn max_bit_rate_high_444_12(&self) -> Option<u32> {
+        self.max_bit_rate_high.map(|v| v * 3)
+    }
+    pub fn max_bit_rate_high_444_16_intra(&self) -> Option<u32> {
+        self.max_bit_rate_high.map(|v| v * 8)
+    }
+    pub fn max_bit_rate_high_throughput_444_16_intra(&self) -> Option<u32> {
+        self.max_bit_rate_high_444_16_intra().map(|v| v * 12)
+    }
+}
+
+pub const LEVEL_DETAILS: [LevelSpecification; 18] = [
+    LevelSpecification {
         id: Level::L1,
         max_luma_sample_rate: 552_960,
         max_luma_picture_size: 36_864,
         max_bit_rate_main: 128,
-        max_bit_rate_high: 0,
+        max_bit_rate_high: None,
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L2,
         max_luma_sample_rate: 3_686_400,
         max_luma_picture_size: 122_880,
         max_bit_rate_main: 1_500,
-        max_bit_rate_high: 0,
+        max_bit_rate_high: None,
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L2_1,
         max_luma_sample_rate: 7_372_800,
         max_luma_picture_size: 245_760,
         max_bit_rate_main: 3_000,
-        max_bit_rate_high: 0,
+        max_bit_rate_high: None,
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L3,
         max_luma_sample_rate: 16_588_800,
         max_luma_picture_size: 552_960,
         max_bit_rate_main: 6_000,
-        max_bit_rate_high: 0,
+        max_bit_rate_high: None,
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L3_1,
         max_luma_sample_rate: 33_177_600,
         max_luma_picture_size: 983_040,
         max_bit_rate_main: 10_000,
-        max_bit_rate_high: 0,
+        max_bit_rate_high: None,
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L4,
         max_luma_sample_rate: 66_846_720,
         max_luma_picture_size: 2_228_224,
         max_bit_rate_main: 12_000,
-        max_bit_rate_high: 30_000,
+        max_bit_rate_high: Some(30_000),
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L4_1,
         max_luma_sample_rate: 133_693_440,
         max_luma_picture_size: 2_228_224,
         max_bit_rate_main: 20_000,
-        max_bit_rate_high: 50_000,
+        max_bit_rate_high: Some(50_000),
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L5,
         max_luma_sample_rate: 267_386_880,
         max_luma_picture_size: 8_912_896,
         max_bit_rate_main: 25_000,
-        max_bit_rate_high: 100_000,
+        max_bit_rate_high: Some(100_000),
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L5_1,
         max_luma_sample_rate: 534_773_760,
         max_luma_picture_size: 8_912_896,
         max_bit_rate_main: 40_000,
-        max_bit_rate_high: 160_000,
+        max_bit_rate_high: Some(160_000),
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L5_2,
         max_luma_sample_rate: 1_069_547_520,
         max_luma_picture_size: 8_912_896,
         max_bit_rate_main: 60_000,
-        max_bit_rate_high: 240_000,
+        max_bit_rate_high: Some(240_000),
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L6,
         max_luma_sample_rate: 1_069_547_520,
         max_luma_picture_size: 35_651_584,
         max_bit_rate_main: 60_000,
-        max_bit_rate_high: 240_000,
+        max_bit_rate_high: Some(240_000),
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L6_1,
         max_luma_sample_rate: 2_139_095_040,
         max_luma_picture_size: 35_651_584,
         max_bit_rate_main: 120_000,
-        max_bit_rate_high: 480_000,
+        max_bit_rate_high: Some(480_000),
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L6_2,
         max_luma_sample_rate: 4_278_190_080,
         max_luma_picture_size: 35_651_584,
         max_bit_rate_main: 240_000,
-        max_bit_rate_high: 800_000,
+        max_bit_rate_high: Some(800_000),
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L6_3,
         max_luma_sample_rate: 4_812_963_840,
         max_luma_picture_size: 35_651_584,
         max_bit_rate_main: 240_000,
-        max_bit_rate_high: 1_600_000,
+        max_bit_rate_high: Some(1_600_000),
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L7,
         max_luma_sample_rate: 4_812_963_840,
         max_luma_picture_size: 142_606_336,
         max_bit_rate_main: 240_000,
-        max_bit_rate_high: 1_600_000,
+        max_bit_rate_high: Some(1_600_000),
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L7_1,
         max_luma_sample_rate: 8_556_380_160,
         max_luma_picture_size: 142_606_336,
         max_bit_rate_main: 480_000,
-        max_bit_rate_high: 3_200_000,
+        max_bit_rate_high: Some(3_200_000),
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L7_2,
         max_luma_sample_rate: 17_112_760_320,
         max_luma_picture_size: 142_606_336,
         max_bit_rate_main: 960_000,
-        max_bit_rate_high: 6_400_000,
+        max_bit_rate_high: Some(6_400_000),
     },
-    LevelDetail {
+    LevelSpecification {
         id: Level::L8_5,
         max_luma_sample_rate: std::u64::MAX,
         max_luma_picture_size: std::u32::MAX,
         max_bit_rate_main: std::u32::MAX,
-        max_bit_rate_high: std::u32::MAX,
+        max_bit_rate_high: Some(std::u32::MAX),
     },
 ];
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn level_mult() {
+        use crate::hevc::Level;
+
+        assert_eq!(Level::L6_2, Level::from(186));
+    }
+
+    #[test]
+    fn max_bitrate() {
+        use crate::hevc::Level;
+
+        // test level 5.2
+        let l = crate::hevc::get(Level::L5_2);
+        assert_eq!(l.id(), Level::L5_2);
+        assert_eq!(l.max_bit_rate_main(), 60_000);
+        assert_eq!(l.max_bit_rate_main_10(), 60_000);
+        assert_eq!(l.max_bit_rate_main_12(), 90_000);
+        assert_eq!(l.max_bit_rate_main_444_12(), 180_000);
+        assert_eq!(l.max_bit_rate_main_444_16_intra(), 480_000);
+        assert_eq!(l.max_bit_rate_main_throughput_444_16_intra(), 5_760_000);
+        assert_eq!(l.max_bit_rate_high_444_12(), Some(720_000));
+        assert_eq!(l.max_bit_rate_high_444_16_intra(), Some(1_920_000));
+        assert_eq!(
+            l.max_bit_rate_high_throughput_444_16_intra(),
+            Some(23_040_000)
+        );
+
+        // test level 2
+        let l = crate::hevc::get(Level::L2);
+        assert_eq!(l.id(), Level::L2);
+        assert_eq!(l.max_bit_rate_main(), 1_500);
+        assert_eq!(l.max_bit_rate_high_12(), None);
+    }
+}
