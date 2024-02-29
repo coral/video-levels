@@ -1,5 +1,3 @@
-use strum_macros::Display;
-
 use crate::types::Dimension;
 use std::fmt::Display;
 
