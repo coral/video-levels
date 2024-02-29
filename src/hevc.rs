@@ -181,6 +181,20 @@ impl LevelSpecification {
     pub fn max_bit_rate_high_throughput_444_16_intra(&self) -> Option<u32> {
         self.max_bit_rate_high_444_16_intra().map(|v| v * 12)
     }
+    pub fn max_decoder_picture_buffer_size(&self, width: u32, height: u32) -> u32 {
+        let luma_samples = width * height;
+        let max_dpb_pic_buf = 6;
+
+        if luma_samples <= self.max_luma_picture_size >> 2 {
+            std::cmp::min(4 * max_dpb_pic_buf, 16)
+        } else if luma_samples <= self.max_luma_picture_size >> 1 {
+            std::cmp::min(2 * max_dpb_pic_buf, 16)
+        } else if luma_samples <= 3 * self.max_luma_picture_size >> 2 {
+            std::cmp::min((4 * max_dpb_pic_buf) / 3, 16)
+        } else {
+            max_dpb_pic_buf
+        }
+    }
 }
 
 pub const LEVEL_DETAILS: [LevelSpecification; 18] = [
@@ -346,5 +360,19 @@ mod tests {
         assert_eq!(l.id(), Level::L2);
         assert_eq!(l.max_bit_rate_main(), 1_500);
         assert_eq!(l.max_bit_rate_high_12(), None);
+    }
+
+    #[test]
+    fn max_dpb_pic_buf() {
+        use crate::hevc::Level;
+
+        let l = crate::hevc::get(Level::L4);
+        assert_eq!(l.max_decoder_picture_buffer_size(1280, 720), 12);
+        assert_eq!(l.max_decoder_picture_buffer_size(1920, 1080), 6);
+
+        let l = crate::hevc::get(Level::L5_2);
+        assert_eq!(l.max_decoder_picture_buffer_size(1920, 1080), 16);
+        assert_eq!(l.max_decoder_picture_buffer_size(2560, 1440), 12);
+        assert_eq!(l.max_decoder_picture_buffer_size(3840, 2160), 6);
     }
 }
