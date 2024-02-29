@@ -243,7 +243,7 @@ impl LevelSpecification {
             std::cmp::min(4 * max_dpb_pic_buf, 16)
         } else if luma_samples <= self.max_luma_picture_size >> 1 {
             std::cmp::min(2 * max_dpb_pic_buf, 16)
-        } else if luma_samples <= 3 * self.max_luma_picture_size >> 2 {
+        } else if luma_samples <= (3 * self.max_luma_picture_size) >> 2 {
             std::cmp::min((4 * max_dpb_pic_buf) / 3, 16)
         } else {
             max_dpb_pic_buf
