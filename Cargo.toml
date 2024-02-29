@@ -3,5 +3,9 @@ name = "video-levels"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+keywords = ["video", "codec", "levels", "helper"]
+categories = ["multimedia"]
+description = "Helper for working with levels in video codecs"
+repository = "https://github.com/coral/video-levels"
 
 [dependencies]
