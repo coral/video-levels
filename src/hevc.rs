@@ -3,11 +3,22 @@
 /// https://itu.int/rec/T-REC-H.265-202309-I/en
 use std::fmt::Display;
 
-pub fn select(width: u32, height: u32, framerate: f32) -> LevelSpecification {
+pub fn select(
+    width: u32,
+    height: u32,
+    framerate: f32,
+    max_bitrate: u32,
+    profile: Profile,
+    tier: Tier,
+) -> LevelSpecification {
     let sr = (width * height) as u64 * framerate.ceil() as u64;
     for level in LEVEL_DETAILS.iter() {
         if sr <= level.max_luma_sample_rate {
-            return *level;
+            if let Some(mb) = level.max_bit_rate(&profile, &tier) {
+                if mb >= max_bitrate {
+                    return *level;
+                }
+            }
         }
     }
 
@@ -22,6 +33,21 @@ pub fn get(level: Level) -> LevelSpecification {
     }
 
     LEVEL_DETAILS[LEVEL_DETAILS.len() - 1]
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Tier {
+    Main,
+    High,
+}
+
+pub enum Profile {
+    Main,
+    Main10,
+    Main12,
+    Main444,
+    Main444_16Intra,
+    Main444_16IntraHighThroughput,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -144,6 +170,34 @@ impl LevelSpecification {
     }
     pub fn max_luma_picture_size(&self) -> u32 {
         self.max_luma_picture_size
+    }
+    pub fn max_bit_rate(&self, profile: &Profile, tier: &Tier) -> Option<u32> {
+        match profile {
+            Profile::Main => match tier {
+                Tier::Main => Some(self.max_bit_rate_main),
+                Tier::High => self.max_bit_rate_high,
+            },
+            Profile::Main10 => match tier {
+                Tier::Main => Some(self.max_bit_rate_main_10()),
+                Tier::High => self.max_bit_rate_high_10(),
+            },
+            Profile::Main12 => match tier {
+                Tier::Main => Some(self.max_bit_rate_main_12()),
+                Tier::High => self.max_bit_rate_high_12(),
+            },
+            Profile::Main444 => match tier {
+                Tier::Main => Some(self.max_bit_rate_main_444_12()),
+                Tier::High => self.max_bit_rate_high_444_12(),
+            },
+            Profile::Main444_16Intra => match tier {
+                Tier::Main => Some(self.max_bit_rate_main_444_16_intra()),
+                Tier::High => self.max_bit_rate_high_444_16_intra(),
+            },
+            Profile::Main444_16IntraHighThroughput => match tier {
+                Tier::Main => Some(self.max_bit_rate_main_throughput_444_16_intra()),
+                Tier::High => self.max_bit_rate_high_throughput_444_16_intra(),
+            },
+        }
     }
     pub fn max_bit_rate_main(&self) -> u32 {
         self.max_bit_rate_main
@@ -374,5 +428,13 @@ mod tests {
         assert_eq!(l.max_decoder_picture_buffer_size(1920, 1080), 16);
         assert_eq!(l.max_decoder_picture_buffer_size(2560, 1440), 12);
         assert_eq!(l.max_decoder_picture_buffer_size(3840, 2160), 6);
+    }
+
+    #[test]
+    fn selecting() {
+        use crate::hevc::{Level, Profile, Tier};
+
+        let level = crate::hevc::select(1920, 1080, 100.0, 38_000, Profile::Main, Tier::Main);
+        assert_eq!(level.id(), Level::L5_1);
     }
 }

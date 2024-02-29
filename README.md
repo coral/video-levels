@@ -2,6 +2,11 @@
 
 Crate that helps you deal with video levels in H.264 and HEVC etc.
 
+todo:
+
+- [x] HEVC
+- [ ] H264
+
 ## Why?
 
 after going insane reading wikipedia and the ITU specs I was like... yeah ok i don't want to do this again
