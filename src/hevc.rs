@@ -3,6 +3,12 @@
 /// https://itu.int/rec/T-REC-H.265-202309-I/en
 use std::fmt::Display;
 
+/// select clamps down to the lowest level that supports your spec
+///
+/// * width and height in pixels
+/// * framerate in frames per second
+/// * max_bitrate in bits per second / 1000
+/// * profile and tier are the HEVC profile and tier
 pub fn select(
     width: u32,
     height: u32,
@@ -25,6 +31,7 @@ pub fn select(
     LEVEL_DETAILS[LEVEL_DETAILS.len() - 1]
 }
 
+/// get returns the level specification for the given level
 pub fn get(level: Level) -> LevelSpecification {
     for l in LEVEL_DETAILS.iter() {
         if l.id() == level {
@@ -41,6 +48,7 @@ pub enum Tier {
     High,
 }
 
+/// Not a complete list but like... feel free to commit more
 pub enum Profile {
     Main,
     Main10,
@@ -69,6 +77,7 @@ pub enum Level {
     L7,
     L7_1,
     L7_2,
+    /// Everything goes when you hit 8.5
     L8_5,
 }
 
