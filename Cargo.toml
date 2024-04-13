@@ -9,3 +9,4 @@ description = "Helper for working with levels in video codecs"
 repository = "https://github.com/coral/video-levels"
 
 [dependencies]
+yuv = { path = "../yuv" }
