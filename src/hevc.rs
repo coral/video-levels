@@ -6,33 +6,103 @@ use std::fmt::Display;
 use yuv::color::ChromaSampling;
 use yuv::color::Depth;
 
-/// select clamps down to the lowest level that supports your spec
-///
-/// * width and height in pixels
-/// * framerate in frames per second
-/// * max_bitrate in bits per second / 1000
-/// * profile and tier are the HEVC profile and tier
-// pub fn select(
-//     width: u32,
-//     height: u32,
-//     framerate: f32,
-//     max_bitrate: u32,
-//     profile: Profile,
-//     tier: Tier,
-// ) -> LevelSpecification {
-//     let sr = (width * height) as u64 * framerate.ceil() as u64;
-//     for level in LEVEL_DETAILS.iter() {
-//         if sr <= level.max_luma_sample_rate {
-//             if let Some(mb) = level.max_bit_rate(&profile, &tier) {
-//                 if mb >= max_bitrate {
-//                     return *level;
-//                 }
-//             }
-//         }
-//     }
+pub struct LevelSelector {
+    // Constraints
+    width: u32,
+    height: u32,
+    framerate: f32,
+    tier: Tier,
+    profile: Profile,
+    min_level: Option<Level>,
+    max_level: Option<Level>,
+    max_bitrate: Option<u32>,
+}
 
-//     LEVEL_DETAILS[LEVEL_DETAILS.len() - 1]
-// }
+impl LevelSelector {
+    pub fn new() -> Self {
+        Self {
+            // Define default behaviour if no constraints are set
+            width: 1920,
+            height: 1080,
+            framerate: 30.0,
+            tier: Tier::Main,
+            profile: Profile::Main,
+            // Ignore if not set
+            min_level: None,
+            max_level: None,
+            max_bitrate: None,
+        }
+    }
+    pub fn width(mut self, width: u32) -> Self {
+        self.width = width;
+        self
+    }
+    pub fn height(mut self, height: u32) -> Self {
+        self.height = height;
+        self
+    }
+    pub fn framerate(mut self, framerate: f32) -> Self {
+        self.framerate = framerate;
+        self
+    }
+    pub fn clamp(mut self, min: Level, max: Level) -> Self {
+        self.min_level = Some(min);
+        self.max_level = Some(max);
+        self
+    }
+    pub fn max_bitrate(mut self, max_bitrate: u32) -> Self {
+        self.max_bitrate = Some(max_bitrate);
+        self
+    }
+    pub fn tier(mut self, tier: Tier) -> Self {
+        self.tier = tier;
+        self
+    }
+    pub fn profile(mut self, profile: Profile) -> Self {
+        self.profile = profile;
+        self
+    }
+
+    pub fn select(self) -> Option<LevelSpecification> {
+        let samplerate = (self.width * self.height) as u64 * self.framerate.ceil() as u64;
+
+        for level in LEVEL_DETAILS.iter() {
+            if samplerate <= level.max_luma_sample_rate {
+                // Check if level fits within the max specified bitrate
+                let selected = match (
+                    self.max_bitrate,
+                    level.max_bit_rate(self.profile, self.tier),
+                ) {
+                    (Some(bitrate_constraint), Some(level_max_bitrate))
+                        if level_max_bitrate >= bitrate_constraint =>
+                    {
+                        *level
+                    }
+                    (None, Some(_)) => *level,
+                    _ => continue,
+                };
+
+                // Clamp to min level
+                match self.min_level {
+                    Some(min) if selected.id() < min => {
+                        continue;
+                    }
+                    _ => {}
+                }
+
+                // Check if exceds max level
+                match self.max_level {
+                    Some(max) if selected.id() > max => return None,
+                    _ => {}
+                }
+
+                return Some(selected);
+            }
+        }
+
+        Some(LEVEL_DETAILS[LEVEL_DETAILS.len() - 1])
+    }
+}
 
 /// get returns the level specification for the given level
 pub fn get(level: Level) -> LevelSpecification {
@@ -53,6 +123,7 @@ pub enum Tier {
     High,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 /// Not a complete list but like... feel free to commit more
 pub enum Profile {
     Main,
@@ -484,10 +555,105 @@ mod tests {
     }
 
     #[test]
-    fn selecting() {
-        use crate::hevc::{Level, Profile, Tier};
+    fn select_base_cases() {
+        use crate::hevc::{Level, LevelSelector, Profile, Tier};
+        assert_eq!(
+            LevelSelector::new()
+                .width(1920)
+                .height(1080)
+                .framerate(30.0)
+                .tier(Tier::Main)
+                .profile(Profile::Main)
+                .select()
+                .unwrap()
+                .id(),
+            Level::L4
+        );
 
-        // let level = crate::hevc::select(1920, 1080, 100.0, 38_000, Profile::Main, Tier::Main);
-        // assert_eq!(level.id(), Level::L5_1);
+        assert_eq!(
+            LevelSelector::new()
+                .width(3840)
+                .height(2160)
+                .framerate(30.0)
+                .tier(Tier::Main)
+                .profile(Profile::Main)
+                .select()
+                .unwrap()
+                .id(),
+            Level::L5
+        );
+
+        assert_eq!(
+            LevelSelector::new()
+                .width(3840)
+                .height(2160)
+                .framerate(60.0)
+                .tier(Tier::Main)
+                .profile(Profile::Main)
+                .select()
+                .unwrap()
+                .id(),
+            Level::L5_1
+        );
+
+        assert_eq!(
+            LevelSelector::new()
+                .width(3840)
+                .height(2160)
+                .framerate(66.0)
+                .tier(Tier::Main)
+                .profile(Profile::Main)
+                .select()
+                .unwrap()
+                .id(),
+            Level::L5_2
+        );
+    }
+
+    #[test]
+    fn select_clamp_cases() {
+        use crate::hevc::{Level, LevelSelector, Profile, Tier};
+
+        assert_eq!(
+            LevelSelector::new()
+                .width(1920)
+                .height(1080)
+                .framerate(60.0)
+                .tier(Tier::Main)
+                .profile(Profile::Main)
+                .clamp(Level::L5_2, Level::L7_1)
+                .select()
+                .unwrap()
+                .id(),
+            Level::L5_2
+        );
+
+        assert!(LevelSelector::new()
+            .width(1920)
+            .height(1080)
+            .framerate(60.0)
+            .tier(Tier::Main)
+            .profile(Profile::Main)
+            .clamp(Level::L2, Level::L2_1)
+            .select()
+            .is_none());
+    }
+
+    #[test]
+    fn select_bitrate_cases() {
+        use crate::hevc::{Level, LevelSelector, Profile, Tier};
+        assert_eq!(
+            LevelSelector::new()
+                .width(1920)
+                .height(1080)
+                .framerate(60.0)
+                .tier(Tier::Main)
+                .profile(Profile::Main)
+                .max_bitrate(80000)
+                .select()
+                .unwrap()
+                .id(),
+            Level::L6_1
+        );
     }
 }

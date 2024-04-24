@@ -72,32 +72,32 @@ pub fn yuv_bitrate(
     (pixels as f32 * bpp as f32 * fps) / 1000.0
 }
 
-pub fn chroma_multiplier(base: u64, subsampling: ChromaSampling, bit_depth: Depth) -> u64 {
-    let multiplier = match subsampling {
-        ChromaSampling::Cs444 => 1,
-        ChromaSampling::Cs422 => 2,
-        ChromaSampling::Cs420 => 3,
-        ChromaSampling::Monochrome => 1,
-    };
+// pub fn chroma_multiplier(base: u64, subsampling: ChromaSampling, bit_depth: Depth) -> u64 {
+//     let multiplier = match subsampling {
+//         ChromaSampling::Cs444 => 1,
+//         ChromaSampling::Cs422 => 2,
+//         ChromaSampling::Cs420 => 3,
+//         ChromaSampling::Monochrome => 1,
+//     };
 
-    let bpp = match subsampling {
-        ChromaSampling::Cs444 => {
-            // 4:4:4 subsampling has 3 samples per pixel, all of equal bit depth.
-            3 * bit_depth as u32
-        }
-        ChromaSampling::Cs422 => {
-            // 4:2:2 subsampling has 2 chroma samples for every 2 pixels, plus 1 luma per pixel.
-            (2 * bit_depth as u32) + (bit_depth as u32)
-        }
-        ChromaSampling::Cs420 => {
-            // 4:2:0 subsampling has 1 chroma sample for every 4 pixels, plus 1 luma per pixel.
-            (bit_depth as u32) + (bit_depth as u32 / 2)
-        }
-        ChromaSampling::Monochrome => {
-            // 4:0:0 subsampling has only luma samples.
-            bit_depth as u32
-        }
-    };
+//     let bpp = match subsampling {
+//         ChromaSampling::Cs444 => {
+//             // 4:4:4 subsampling has 3 samples per pixel, all of equal bit depth.
+//             3 * bit_depth as u32
+//         }
+//         ChromaSampling::Cs422 => {
+//             // 4:2:2 subsampling has 2 chroma samples for every 2 pixels, plus 1 luma per pixel.
+//             (2 * bit_depth as u32) + (bit_depth as u32)
+//         }
+//         ChromaSampling::Cs420 => {
+//             // 4:2:0 subsampling has 1 chroma sample for every 4 pixels, plus 1 luma per pixel.
+//             (bit_depth as u32) + (bit_depth as u32 / 2)
+//         }
+//         ChromaSampling::Monochrome => {
+//             // 4:0:0 subsampling has only luma samples.
+//             bit_depth as u32
+//         }
+//     };
 
-    base * bpp as u64
-}
+//     base * bpp as u64
+// }
