@@ -1,13 +1,14 @@
 use yuv::color::ChromaSampling;
 use yuv::color::Depth;
 
-pub struct ProfileSpecification {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ProfileConstraint {
     pub max_bit_depth: Depth,
     pub max_chroma_format: ChromaSampling,
     pub mono_chrome: bool,
 }
 
-impl ProfileSpecification {
+impl ProfileConstraint {
     pub fn new(max_bit_depth: Depth, max_chroma_format: ChromaSampling, mono_chrome: bool) -> Self {
         Self {
             max_bit_depth,

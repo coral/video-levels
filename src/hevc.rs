@@ -1,4 +1,4 @@
-use crate::common::ProfileSpecification;
+use crate::common::ProfileConstraint;
 /// Implementing the HEVC spec for levels
 ///
 /// https://itu.int/rec/T-REC-H.265-202309-I/en
@@ -65,70 +65,78 @@ pub enum Profile {
 }
 
 impl Profile {
-    pub fn bitrate_multiplier(&self, cc: ChromaSampling, bp: Depth) -> f32 {
-        match cc {
-            ChromaSampling::Cs420 => match bp {
+    pub fn bitrate_multiplier(&self) -> f32 {
+        let spec = ProfileConstraint::from(self);
+        let pixel_multiplier = match spec.max_chroma_format {
+            ChromaSampling::Cs420 => match spec.max_bit_depth {
                 Depth::Depth8 => 1.0,
                 Depth::Depth10 => 1.0,
                 Depth::Depth12 => 1.5,
                 Depth::Depth16 => 3.0,
             },
-            ChromaSampling::Cs422 => match bp {
+            ChromaSampling::Cs422 => match spec.max_bit_depth {
                 Depth::Depth8 => 2.0,
                 Depth::Depth10 => 2.0,
                 Depth::Depth12 => 3.0,
                 Depth::Depth16 => 6.0,
             },
-            ChromaSampling::Cs444 => match bp {
+            ChromaSampling::Cs444 => match spec.max_bit_depth {
                 Depth::Depth8 => 3.0,
                 Depth::Depth10 => 3.0,
                 Depth::Depth12 => 3.0,
                 Depth::Depth16 => 8.0,
             },
-            ChromaSampling::Monochrome => match bp {
+            ChromaSampling::Monochrome => match spec.max_bit_depth {
                 Depth::Depth8 => 1.0,
                 Depth::Depth10 => 1.0,
                 Depth::Depth12 => 1.5,
                 Depth::Depth16 => 3.0,
             },
-        }
+        };
+
+        let throughput_multiplier = match self {
+            Profile::Main444_16IntraHighThroughput => 12.0,
+            _ => 1.0,
+        };
+
+        pixel_multiplier * throughput_multiplier
     }
 }
 
-impl From<&Profile> for ProfileSpecification {
+impl From<&Profile> for ProfileConstraint {
     fn from(profile: &Profile) -> Self {
         match profile {
-            Profile::Main => ProfileSpecification::new(
+            Profile::Main => ProfileConstraint::new(
                 yuv::color::Depth::Depth8,
                 yuv::color::ChromaSampling::Cs420,
                 true,
             ),
-            Profile::Main10 => ProfileSpecification::new(
+            Profile::Main10 => ProfileConstraint::new(
                 yuv::color::Depth::Depth10,
                 yuv::color::ChromaSampling::Cs420,
                 true,
             ),
-            Profile::Main12 => ProfileSpecification::new(
+            Profile::Main12 => ProfileConstraint::new(
                 yuv::color::Depth::Depth12,
                 yuv::color::ChromaSampling::Cs420,
                 true,
             ),
-            Profile::Main422_10 => ProfileSpecification::new(
+            Profile::Main422_10 => ProfileConstraint::new(
                 yuv::color::Depth::Depth10,
                 yuv::color::ChromaSampling::Cs422,
                 true,
             ),
-            Profile::Main444 => ProfileSpecification::new(
+            Profile::Main444 => ProfileConstraint::new(
                 yuv::color::Depth::Depth8,
                 yuv::color::ChromaSampling::Cs444,
                 true,
             ),
-            Profile::Main444_16Intra => ProfileSpecification::new(
+            Profile::Main444_16Intra => ProfileConstraint::new(
                 yuv::color::Depth::Depth16,
                 yuv::color::ChromaSampling::Cs444,
                 true,
             ),
-            Profile::Main444_16IntraHighThroughput => ProfileSpecification::new(
+            Profile::Main444_16IntraHighThroughput => ProfileConstraint::new(
                 yuv::color::Depth::Depth16,
                 yuv::color::ChromaSampling::Cs444,
                 true,
@@ -253,94 +261,26 @@ impl LevelSpecification {
     pub fn id(&self) -> Level {
         self.id
     }
+
     pub fn max_luma_sample_rate(&self) -> u64 {
         self.max_luma_sample_rate
     }
+
     pub fn max_luma_picture_size(&self) -> u32 {
         self.max_luma_picture_size
     }
-    // pub fn max_bit_rate(&self, profile: &Profile, tier: &Tier) -> Option<u32> {
-    //     match profile {
-    //         Profile::Main => match tier {
-    //             Tier::Main => Some(self.max_bit_rate_main),
-    //             Tier::High => self.max_bit_rate_high,
-    //         },
-    //         Profile::Main10 => match tier {
-    //             Tier::Main => Some(self.max_bit_rate_main_10()),
-    //             Tier::High => self.max_bit_rate_high_10(),
-    //         },
-    //         Profile::Main12 => match tier {
-    //             Tier::Main => Some(self.max_bit_rate_main_12()),
-    //             Tier::High => self.max_bit_rate_high_12(),
-    //         },
-    //         Profile::Main422_10 => match tier {
-    //             Tier::Main => Some(self.max_bit_rate_main_444_12()),
-    //             Tier::High => self.max_bit_rate_high_444_12(),
-    //         },
-    //         Profile::Main444 => match tier {
-    //             Tier::Main => Some(self.max_bit_rate_main_444_12()),
-    //             Tier::High => self.max_bit_rate_high_444_12(),
-    //         },
-    //         Profile::Main444_16Intra => match tier {
-    //             Tier::Main => Some(self.max_bit_rate_main_444_16_intra()),
-    //             Tier::High => self.max_bit_rate_high_444_16_intra(),
-    //         },
-    //         Profile::Main444_16IntraHighThroughput => match tier {
-    //             Tier::Main => Some(self.max_bit_rate_main_throughput_444_16_intra()),
-    //             Tier::High => self.max_bit_rate_high_throughput_444_16_intra(),
-    //         },
-    //     }
-    // }
 
-    pub fn max_bit_rate(&self, profile: &Profile) -> u32 {
-        let spec = ProfileSpecification::from(profile);
-        // (Profile::Main12.bitrate_multiplier(ChromaSampling::Cs420, Depth::Depth12)
-        //     * self.max_bit_rate_main as f32) as u32
+    pub fn max_bit_rate(&self, profile: Profile, tier: Tier) -> Option<u32> {
+        match tier {
+            Tier::Main => {
+                Some((self.max_bit_rate_main as f32 * profile.bitrate_multiplier()) as u32)
+            }
+            Tier::High => self
+                .max_bit_rate_high
+                .map(|v| (v as f32 * profile.bitrate_multiplier()) as u32),
+        }
     }
-    pub fn max_bit_rate_main(&self) -> u32 {
-        self.max_bit_rate_main
-    }
-    // pub fn max_bit_rate_main(&self) -> u32 {
-    //     self.max_bit_rate_main
-    // }
-    // pub fn max_bit_rate_main_10(&self) -> u32 {
-    //     self.max_bit_rate_main
-    // }
-    pub fn max_bit_rate_main_12(&self) -> u32 {
-        //self.max_bit_rate_main
 
-        (Profile::Main12.bitrate_multiplier(ChromaSampling::Cs420, Depth::Depth12)
-            * self.max_bit_rate_main as f32) as u32
-
-        //(self.max_bit_rate_main as f32 * 1.5) as u32
-    }
-    // pub fn max_bit_rate_main_444_12(&self) -> u32 {
-    //     self.max_bit_rate_main * 3
-    // }
-    // pub fn max_bit_rate_main_444_16_intra(&self) -> u32 {
-    //     self.max_bit_rate_main * 8
-    // }
-    // pub fn max_bit_rate_main_throughput_444_16_intra(&self) -> u32 {
-    //     self.max_bit_rate_main_444_16_intra() * 12
-    // }
-    // pub fn max_bit_rate_high(&self) -> Option<u32> {
-    //     self.max_bit_rate_high
-    // }
-    // pub fn max_bit_rate_high_10(&self) -> Option<u32> {
-    //     self.max_bit_rate_high
-    // }
-    // pub fn max_bit_rate_high_12(&self) -> Option<u32> {
-    //     self.max_bit_rate_high.map(|v| (v as f32 * 1.5) as u32)
-    // }
-    // pub fn max_bit_rate_high_444_12(&self) -> Option<u32> {
-    //     self.max_bit_rate_high.map(|v| v * 3)
-    // }
-    // pub fn max_bit_rate_high_444_16_intra(&self) -> Option<u32> {
-    //     self.max_bit_rate_high.map(|v| v * 8)
-    // }
-    // pub fn max_bit_rate_high_throughput_444_16_intra(&self) -> Option<u32> {
-    //     self.max_bit_rate_high_444_16_intra().map(|v| v * 12)
-    // }
     pub fn max_decoder_picture_buffer_size(&self, width: u32, height: u32) -> u32 {
         let luma_samples = width * height;
         let max_dpb_pic_buf = 6;
@@ -497,29 +437,36 @@ mod tests {
 
     #[test]
     fn max_bitrate() {
-        use crate::hevc::Level;
+        use crate::hevc::{self, Level, Profile, Tier};
 
         // test level 5.2
-        let l = crate::hevc::get(Level::L5_2);
+        let l = hevc::get(Level::L5_2);
         assert_eq!(l.id(), Level::L5_2);
-        assert_eq!(l.max_bit_rate_main(), 60_000);
-        //assert_eq!(l.max_bit_rate_main_10(), 60_000);
-        assert_eq!(l.max_bit_rate_main_12(), 90_000);
-        // assert_eq!(l.max_bit_rate_main_444_12(), 180_000);
-        // assert_eq!(l.max_bit_rate_main_444_16_intra(), 480_000);
-        // assert_eq!(l.max_bit_rate_main_throughput_444_16_intra(), 5_760_000);
-        // assert_eq!(l.max_bit_rate_high_444_12(), Some(720_000));
-        // assert_eq!(l.max_bit_rate_high_444_16_intra(), Some(1_920_000));
-        // assert_eq!(
-        //     l.max_bit_rate_high_throughput_444_16_intra(),
-        //     Some(23_040_000)
-        // );
+        assert_eq!(l.max_bit_rate(Profile::Main, Tier::Main), Some(60_000));
+        assert_eq!(l.max_bit_rate(Profile::Main12, Tier::Main), Some(90_000));
+        assert_eq!(l.max_bit_rate(Profile::Main444, Tier::Main), Some(180_000));
+        assert_eq!(
+            l.max_bit_rate(Profile::Main444_16Intra, Tier::Main),
+            Some(480_000)
+        );
+        assert_eq!(
+            l.max_bit_rate(Profile::Main444_16IntraHighThroughput, Tier::Main),
+            Some(5_760_000)
+        );
+        assert_eq!(l.max_bit_rate(Profile::Main444, Tier::High), Some(720_000));
+        assert_eq!(
+            l.max_bit_rate(Profile::Main444_16Intra, Tier::High),
+            Some(1_920_000)
+        );
+        assert_eq!(
+            l.max_bit_rate(Profile::Main444_16IntraHighThroughput, Tier::High),
+            Some(23_040_000)
+        );
 
         // test level 2
-        let l = crate::hevc::get(Level::L2);
+        let l = hevc::get(Level::L2);
         assert_eq!(l.id(), Level::L2);
-        assert_eq!(l.max_bit_rate_main(), 1_500);
-        //assert_eq!(l.max_bit_rate_high_12(), None);
+        assert_eq!(l.max_bit_rate(Profile::Main, Tier::Main), Some(1_500));
     }
 
     #[test]
