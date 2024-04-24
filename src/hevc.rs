@@ -2,7 +2,7 @@ use crate::common::ProfileConstraint;
 /// Implementing the HEVC spec for levels
 ///
 /// https://itu.int/rec/T-REC-H.265-202309-I/en
-use std::fmt::Display;
+use std::fmt;
 use yuv::color::ChromaSampling;
 use yuv::color::Depth;
 
@@ -292,28 +292,29 @@ impl Level {
     }
 }
 
-impl Display for Level {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Level::L1 => write!(f, "1"),
-            Level::L2 => write!(f, "2"),
-            Level::L2_1 => write!(f, "2.1"),
-            Level::L3 => write!(f, "3"),
-            Level::L3_1 => write!(f, "3.1"),
-            Level::L4 => write!(f, "4"),
-            Level::L4_1 => write!(f, "4.1"),
-            Level::L5 => write!(f, "5"),
-            Level::L5_1 => write!(f, "5.1"),
-            Level::L5_2 => write!(f, "5.2"),
-            Level::L6 => write!(f, "6"),
-            Level::L6_1 => write!(f, "6.1"),
-            Level::L6_2 => write!(f, "6.2"),
-            Level::L6_3 => write!(f, "6.3"),
-            Level::L7 => write!(f, "7"),
-            Level::L7_1 => write!(f, "7.1"),
-            Level::L7_2 => write!(f, "7.2"),
-            Level::L8_5 => write!(f, "8.1"),
-        }
+impl fmt::Display for Level {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let level_str = match self {
+            Level::L1 => "1",
+            Level::L2 => "2",
+            Level::L2_1 => "2.1",
+            Level::L3 => "3",
+            Level::L3_1 => "3.1",
+            Level::L4 => "4",
+            Level::L4_1 => "4.1",
+            Level::L5 => "5",
+            Level::L5_1 => "5.1",
+            Level::L5_2 => "5.2",
+            Level::L6 => "6",
+            Level::L6_1 => "6.1",
+            Level::L6_2 => "6.2",
+            Level::L6_3 => "6.3",
+            Level::L7 => "7",
+            Level::L7_1 => "7.1",
+            Level::L7_2 => "7.2",
+            Level::L8_5 => "8.1",
+        };
+        write!(f, "{}", level_str)
     }
 }
 
