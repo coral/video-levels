@@ -1,10 +1,14 @@
 # video levels
 
-Crate that helps you deal with video levels in H.264 and HEVC etc.
+Crate that helps you deal with video levels in video codecs.
+
+implemented:
+
+- [x] HEVC
+- [x] AV1
 
 todo:
 
-- [x] HEVC
 - [ ] H264
 
 ## Why?
