@@ -1,19 +1,17 @@
 use yuv::color::ChromaSampling;
 use yuv::color::Depth;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProfileConstraint {
     pub max_bit_depth: Depth,
-    pub max_chroma_format: ChromaSampling,
-    pub mono_chrome: bool,
+    pub chroma_formats: Vec<ChromaSampling>,
 }
 
 impl ProfileConstraint {
-    pub fn new(max_bit_depth: Depth, max_chroma_format: ChromaSampling, mono_chrome: bool) -> Self {
+    pub fn new(max_bit_depth: Depth, chroma_formats: Vec<ChromaSampling>) -> Self {
         Self {
             max_bit_depth,
-            max_chroma_format,
-            mono_chrome,
+            chroma_formats,
         }
     }
 
@@ -21,19 +19,24 @@ impl ProfileConstraint {
         bit_depth <= self.max_bit_depth
     }
 
-    pub fn supports_chroma_format(&self, chroma_format: ChromaSampling) -> bool {
-        match self.max_chroma_format {
-            ChromaSampling::Cs420 => chroma_format == ChromaSampling::Cs420,
-            ChromaSampling::Cs422 => {
-                chroma_format == ChromaSampling::Cs420 || chroma_format == ChromaSampling::Cs422
-            }
-            ChromaSampling::Cs444 => true,
-            ChromaSampling::Monochrome => self.supports_mono_chrome(),
+    pub fn max_chroma_format(&self) -> ChromaSampling {
+        if self.chroma_formats.contains(&ChromaSampling::Cs444) {
+            ChromaSampling::Cs444
+        } else if self.chroma_formats.contains(&ChromaSampling::Cs422) {
+            ChromaSampling::Cs422
+        } else if self.chroma_formats.contains(&ChromaSampling::Cs420) {
+            ChromaSampling::Cs420
+        } else {
+            ChromaSampling::Monochrome
         }
     }
 
+    pub fn supports_chroma_format(&self, chroma_format: ChromaSampling) -> bool {
+        self.chroma_formats.contains(&chroma_format)
+    }
+
     pub fn supports_mono_chrome(&self) -> bool {
-        self.mono_chrome
+        self.chroma_formats.contains(&ChromaSampling::Monochrome)
     }
 }
 

@@ -1,5 +1,44 @@
 use std::fmt;
 
+use crate::common::ProfileConstraint;
+use yuv::color::ChromaSampling;
+use yuv::color::Depth;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Profile {
+    Main,
+    High,
+    Professional,
+}
+
+impl From<&Profile> for ProfileConstraint {
+    fn from(profile: &Profile) -> Self {
+        match profile {
+            Profile::Main => ProfileConstraint {
+                max_bit_depth: Depth::Depth10,
+                chroma_formats: vec![ChromaSampling::Monochrome, ChromaSampling::Cs420],
+            },
+            Profile::High => ProfileConstraint {
+                max_bit_depth: Depth::Depth10,
+                chroma_formats: vec![
+                    ChromaSampling::Monochrome,
+                    ChromaSampling::Cs420,
+                    ChromaSampling::Cs444,
+                ],
+            },
+            Profile::Professional => ProfileConstraint {
+                max_bit_depth: Depth::Depth12,
+                chroma_formats: vec![
+                    ChromaSampling::Monochrome,
+                    ChromaSampling::Cs420,
+                    ChromaSampling::Cs422,
+                    ChromaSampling::Cs444,
+                ],
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Level {
     L2,
@@ -104,6 +143,12 @@ pub struct LevelSpecification {
     min_comp_basis: u32,
     max_tiles: u32,
     max_tile_cols: u32,
+}
+
+impl LevelSpecification {
+    pub fn id(&self) -> Level {
+        self.id
+    }
 }
 
 pub const LEVEL_DETAILS: [LevelSpecification; 14] = [

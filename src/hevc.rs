@@ -138,7 +138,7 @@ pub enum Profile {
 impl Profile {
     pub fn bitrate_multiplier(&self) -> f32 {
         let spec = ProfileConstraint::from(self);
-        let pixel_multiplier = match spec.max_chroma_format {
+        let pixel_multiplier = match spec.max_chroma_format() {
             ChromaSampling::Cs420 => match spec.max_bit_depth {
                 Depth::Depth8 => 1.0,
                 Depth::Depth10 => 1.0,
@@ -179,38 +179,50 @@ impl From<&Profile> for ProfileConstraint {
         match profile {
             Profile::Main => ProfileConstraint::new(
                 yuv::color::Depth::Depth8,
-                yuv::color::ChromaSampling::Cs420,
-                true,
+                vec![ChromaSampling::Monochrome, ChromaSampling::Cs420],
             ),
             Profile::Main10 => ProfileConstraint::new(
                 yuv::color::Depth::Depth10,
-                yuv::color::ChromaSampling::Cs420,
-                true,
+                vec![ChromaSampling::Monochrome, ChromaSampling::Cs420],
             ),
             Profile::Main12 => ProfileConstraint::new(
                 yuv::color::Depth::Depth12,
-                yuv::color::ChromaSampling::Cs420,
-                true,
+                vec![ChromaSampling::Monochrome, ChromaSampling::Cs420],
             ),
             Profile::Main422_10 => ProfileConstraint::new(
                 yuv::color::Depth::Depth10,
-                yuv::color::ChromaSampling::Cs422,
-                true,
+                vec![
+                    ChromaSampling::Monochrome,
+                    ChromaSampling::Cs420,
+                    ChromaSampling::Cs422,
+                ],
             ),
             Profile::Main444 => ProfileConstraint::new(
                 yuv::color::Depth::Depth8,
-                yuv::color::ChromaSampling::Cs444,
-                true,
+                vec![
+                    ChromaSampling::Monochrome,
+                    ChromaSampling::Cs420,
+                    ChromaSampling::Cs422,
+                    ChromaSampling::Cs444,
+                ],
             ),
             Profile::Main444_16Intra => ProfileConstraint::new(
                 yuv::color::Depth::Depth16,
-                yuv::color::ChromaSampling::Cs444,
-                true,
+                vec![
+                    ChromaSampling::Monochrome,
+                    ChromaSampling::Cs420,
+                    ChromaSampling::Cs422,
+                    ChromaSampling::Cs444,
+                ],
             ),
             Profile::Main444_16IntraHighThroughput => ProfileConstraint::new(
                 yuv::color::Depth::Depth16,
-                yuv::color::ChromaSampling::Cs444,
-                true,
+                vec![
+                    ChromaSampling::Monochrome,
+                    ChromaSampling::Cs420,
+                    ChromaSampling::Cs422,
+                    ChromaSampling::Cs444,
+                ],
             ),
         }
     }
