@@ -136,6 +136,17 @@ impl fmt::Display for Level {
     }
 }
 
+/// get returns the level specification for the given level
+pub fn get(level: Level) -> LevelSpecification {
+    for l in LEVEL_DETAILS.iter() {
+        if l.id() == level {
+            return *l;
+        }
+    }
+    LEVEL_DETAILS[LEVEL_DETAILS.len() - 1]
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct LevelSpecification {
     id: Level,
     max_picture_size: u64,
@@ -394,3 +405,24 @@ pub const LEVEL_DETAILS: [LevelSpecification; 14] = [
         max_tile_cols: 16,
     },
 ];
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn level_mult() {
+        use crate::av1::Level;
+        assert_eq!(Level::L3, Level::from(4));
+    }
+
+    #[test]
+    fn max_bitrate() {
+        use crate::av1::{self, Level, Tier};
+
+        let l = av1::get(Level::L3);
+        assert_eq!(l.max_bit_rate(Tier::Main), Some(6_000_000));
+        assert_eq!(l.max_bit_rate(Tier::High), None);
+
+        let l = av1::get(Level::L5_2);
+        assert_eq!(l.max_bit_rate(Tier::Main), Some(60_000_000));
+        assert_eq!(l.max_bit_rate(Tier::High), Some(240_000_000));
+    }
+}

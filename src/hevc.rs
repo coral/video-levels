@@ -6,6 +6,7 @@ use std::fmt;
 use yuv::color::ChromaSampling;
 use yuv::color::Depth;
 
+#[derive(Debug)]
 pub struct LevelSelector {
     // Constraints
     width: u32,
