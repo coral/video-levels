@@ -34,6 +34,21 @@ let level = LevelSelector::new()
 println!("Level: {:?}", level.unwrap().id());
 ```
 
+AV1 is equally easy
+
+```rust
+use video_levels::AV1::{LevelSelector};
+
+let level = LevelSelector::new()
+    .width(3840)
+    .height(2160)
+    .framerate(60.0)
+    .select();
+
+println!("Level: {:?}", level.unwrap().id());
+```
+
+
 ## Why?
 
 after going insane reading wikipedia and the ITU specs I was like... yeah ok i don't want to do this again
