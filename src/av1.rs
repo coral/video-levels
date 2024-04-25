@@ -11,6 +11,12 @@ pub enum Profile {
     Professional,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Tier {
+    Main,
+    High,
+}
+
 impl From<&Profile> for ProfileConstraint {
     fn from(profile: &Profile) -> Self {
         match profile {
@@ -148,6 +154,45 @@ pub struct LevelSpecification {
 impl LevelSpecification {
     pub fn id(&self) -> Level {
         self.id
+    }
+    pub fn max_picture_size(&self) -> u64 {
+        self.max_picture_size
+    }
+    pub fn max_height(&self) -> u32 {
+        self.max_height
+    }
+    pub fn max_width(&self) -> u32 {
+        self.max_width
+    }
+    pub fn max_display_rate(&self) -> u64 {
+        self.max_display_rate
+    }
+    pub fn max_decode_rate(&self) -> u64 {
+        self.max_decode_rate
+    }
+    pub fn max_header_rate(&self) -> u32 {
+        self.max_header_rate
+    }
+    pub fn max_bit_rate(&self, tier: Tier) -> Option<u64> {
+        match tier {
+            Tier::Main => Some(self.max_bit_rate_main),
+            Tier::High => self.max_bit_rate_high.map(|v| v as u64),
+        }
+    }
+    pub fn max_bit_rate_main(&self) -> u64 {
+        self.max_bit_rate_main
+    }
+    pub fn max_bit_rate_high(&self) -> Option<u32> {
+        self.max_bit_rate_high
+    }
+    pub fn min_comp_basis(&self) -> u32 {
+        self.min_comp_basis
+    }
+    pub fn max_tiles(&self) -> u32 {
+        self.max_tiles
+    }
+    pub fn max_tile_cols(&self) -> u32 {
+        self.max_tile_cols
     }
 }
 

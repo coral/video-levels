@@ -74,7 +74,7 @@ impl LevelSelector {
                     level.max_bit_rate(self.profile, self.tier),
                 ) {
                     (Some(bitrate_constraint), Some(level_max_bitrate))
-                        if level_max_bitrate >= bitrate_constraint =>
+                        if level_max_bitrate >= bitrate_constraint.into() =>
                     {
                         *level
                     }
@@ -136,7 +136,7 @@ pub enum Profile {
 }
 
 impl Profile {
-    pub fn bitrate_multiplier(&self) -> f32 {
+    pub fn bitrate_multiplier(&self) -> f64 {
         let spec = ProfileConstraint::from(self);
         let pixel_multiplier = match spec.max_chroma_format() {
             ChromaSampling::Cs420 => match spec.max_bit_depth {
@@ -354,14 +354,14 @@ impl LevelSpecification {
         self.max_luma_picture_size
     }
 
-    pub fn max_bit_rate(&self, profile: Profile, tier: Tier) -> Option<u32> {
+    pub fn max_bit_rate(&self, profile: Profile, tier: Tier) -> Option<u64> {
         match tier {
             Tier::Main => {
-                Some((self.max_bit_rate_main as f32 * profile.bitrate_multiplier()) as u32)
+                Some((self.max_bit_rate_main as f64 * profile.bitrate_multiplier()) as u64)
             }
             Tier::High => self
                 .max_bit_rate_high
-                .map(|v| (v as f32 * profile.bitrate_multiplier()) as u32),
+                .map(|v| (v as f64 * profile.bitrate_multiplier()) as u64),
         }
     }
 
