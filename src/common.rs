@@ -15,10 +15,6 @@ impl ProfileConstraint {
         }
     }
 
-    pub fn supports_bit_depth(&self, bit_depth: Depth) -> bool {
-        bit_depth <= self.max_bit_depth
-    }
-
     pub fn max_chroma_format(&self) -> ChromaSampling {
         if self.chroma_formats.contains(&ChromaSampling::Cs444) {
             ChromaSampling::Cs444
