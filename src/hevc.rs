@@ -65,7 +65,7 @@ impl LevelSelector {
     }
 
     pub fn select(self) -> Option<LevelSpecification> {
-        let samplerate = (self.width * self.height) as u64 * self.framerate.ceil() as u64;
+        let samplerate = (self.width as u64) * (self.height as u64) * self.framerate.ceil() as u64;
 
         for level in LEVEL_DETAILS.iter() {
             if samplerate <= level.max_luma_sample_rate {
@@ -91,7 +91,7 @@ impl LevelSelector {
                     _ => {}
                 }
 
-                // Check if exceds max level
+                // Check if exceeds max level
                 match self.max_level {
                     Some(max) if selected.id() > max => return None,
                     _ => {}
@@ -325,7 +325,7 @@ impl fmt::Display for Level {
             Level::L7 => "7",
             Level::L7_1 => "7.1",
             Level::L7_2 => "7.2",
-            Level::L8_5 => "8.1",
+            Level::L8_5 => "8.5",
         };
         write!(f, "{}", level_str)
     }
@@ -504,10 +504,10 @@ pub const LEVEL_DETAILS: [LevelSpecification; 18] = [
     },
     LevelSpecification {
         id: Level::L8_5,
-        max_luma_sample_rate: std::u64::MAX,
-        max_luma_picture_size: std::u32::MAX,
-        max_bit_rate_main: std::u32::MAX,
-        max_bit_rate_high: Some(std::u32::MAX),
+        max_luma_sample_rate: u64::MAX,
+        max_luma_picture_size: u32::MAX,
+        max_bit_rate_main: u32::MAX,
+        max_bit_rate_high: Some(u32::MAX),
     },
 ];
 

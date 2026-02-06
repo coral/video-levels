@@ -63,15 +63,15 @@ impl LevelSelector {
     }
 
     pub fn select(self) -> Option<LevelSpecification> {
-        let samples = self.width * self.height;
+        let samples = (self.width as u64) * (self.height as u64);
         let display_rate = (samples as f64 * self.framerate as f64) as u64;
 
         for level in LEVEL_DETAILS.iter() {
-            if samples as u64 <= level.max_picture_size()
+            if samples <= level.max_picture_size()
                 && display_rate <= level.max_display_rate()
                 && self.width <= level.max_width()
                 && self.height <= level.max_height()
-                && self.framerate as u32 <= level.max_header_rate()
+                && self.framerate.ceil() as u32 <= level.max_header_rate()
             {
                 let selected = match (self.max_bitrate, level.max_bit_rate(self.tier)) {
                     (Some(bitrate_constraint), Some(level_max_bitrate))
@@ -91,7 +91,7 @@ impl LevelSelector {
                     _ => {}
                 }
 
-                // Check if exceds max level
+                // Check if exceeds max level
                 match self.max_level {
                     Some(max) if selected.id() > max => return None,
                     _ => {}
